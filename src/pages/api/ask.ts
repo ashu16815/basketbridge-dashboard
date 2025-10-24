@@ -40,7 +40,7 @@ Average Ticket Analysis:
 - Mixed basket uplift: $${data?.kpi ? (data.kpi.avgMixed - data.kpi.avgPure).toFixed(2) : '0.80'}
 
 Category Mix Analysis (Non-exclusive incidence):
-${data?.mixCats?.map(cat => `- ${cat.name}: ${cat.mixTxns.toLocaleString()} transactions (${(cat.mixTxns / data.kpi.mixedTxns * 100).toFixed(1)}% of mixed), $${cat.mixSales.toLocaleString()} sales, avg ticket $${cat.avgTicket.toFixed(2)}`).join('\n') || ''}
+${data?.mixCats?.map((cat: any) => `- ${cat.name}: ${cat.mixTxns.toLocaleString()} transactions (${(cat.mixTxns / data.kpi.mixedTxns * 100).toFixed(1)}% of mixed), $${cat.mixSales.toLocaleString()} sales, avg ticket $${cat.avgTicket.toFixed(2)}`).join('\n') || ''}
 
 Provide strategic insights and analysis based on this data. Focus on business opportunities, conversion strategies, and actionable recommendations.`;
 
