@@ -132,16 +132,19 @@ export default function BasketBridge() {
     return { txnsConverted, sales: deltaAvg * txnsConverted };
   }, [conv]);
 
-  // Drill-Down mode data
-  const hierarchicalData = useMemo(() => [
-    { name: "Total TWL", txnCount: transactionHierarchy.total.txnCount, sales: transactionHierarchy.total.sales, level: 0 },
-    { name: "Grocery Food & Non-Food", txnCount: transactionHierarchy.grocery.txnCount, sales: transactionHierarchy.grocery.sales, level: 1 },
-    { name: "Grocery Food", txnCount: transactionHierarchy.groceryFood.txnCount, sales: transactionHierarchy.groceryFood.sales, level: 2 },
-    { name: "Grocery Food (Pure)", txnCount: transactionHierarchy.groceryFood.pure.txnCount, sales: transactionHierarchy.groceryFood.pure.sales, level: 3 },
-    { name: "Grocery Food (Mixed)", txnCount: transactionHierarchy.groceryFood.mixed.txnCount, sales: transactionHierarchy.groceryFood.mixed.sales, level: 3 },
-    { name: "Grocery (Pure)", txnCount: transactionHierarchy.grocery.pure.txnCount, sales: transactionHierarchy.grocery.pure.sales, level: 2 },
-    { name: "Grocery (Mixed)", txnCount: transactionHierarchy.grocery.mixed.txnCount, sales: transactionHierarchy.grocery.mixed.sales, level: 2 },
-  ], []);
+  // Drill-Down mode data with percentages
+  const hierarchicalData = useMemo(() => {
+    const total = transactionHierarchy.total;
+    return [
+      { name: "Total TWL", txnCount: total.txnCount, sales: total.sales, level: 0, pctTxns: 100, pctRevenue: 100 },
+      { name: "Grocery Food & Non-Food", txnCount: transactionHierarchy.grocery.txnCount, sales: transactionHierarchy.grocery.sales, level: 1, pctTxns: (transactionHierarchy.grocery.txnCount / total.txnCount * 100), pctRevenue: (transactionHierarchy.grocery.sales / total.sales * 100) },
+      { name: "Grocery Food", txnCount: transactionHierarchy.groceryFood.txnCount, sales: transactionHierarchy.groceryFood.sales, level: 2, pctTxns: (transactionHierarchy.groceryFood.txnCount / total.txnCount * 100), pctRevenue: (transactionHierarchy.groceryFood.sales / total.sales * 100) },
+      { name: "Grocery Food (Pure)", txnCount: transactionHierarchy.groceryFood.pure.txnCount, sales: transactionHierarchy.groceryFood.pure.sales, level: 3, pctTxns: (transactionHierarchy.groceryFood.pure.txnCount / total.txnCount * 100), pctRevenue: (transactionHierarchy.groceryFood.pure.sales / total.sales * 100) },
+      { name: "Grocery Food (Mixed)", txnCount: transactionHierarchy.groceryFood.mixed.txnCount, sales: transactionHierarchy.groceryFood.mixed.sales, level: 3, pctTxns: (transactionHierarchy.groceryFood.mixed.txnCount / total.txnCount * 100), pctRevenue: (transactionHierarchy.groceryFood.mixed.sales / total.sales * 100) },
+      { name: "Grocery (Pure)", txnCount: transactionHierarchy.grocery.pure.txnCount, sales: transactionHierarchy.grocery.pure.sales, level: 2, pctTxns: (transactionHierarchy.grocery.pure.txnCount / total.txnCount * 100), pctRevenue: (transactionHierarchy.grocery.pure.sales / total.sales * 100) },
+      { name: "Grocery (Mixed)", txnCount: transactionHierarchy.grocery.mixed.txnCount, sales: transactionHierarchy.grocery.mixed.sales, level: 2, pctTxns: (transactionHierarchy.grocery.mixed.txnCount / total.txnCount * 100), pctRevenue: (transactionHierarchy.grocery.mixed.sales / total.sales * 100) },
+    ];
+  }, []);
 
   const barDataHierarchy = useMemo(() => hierarchicalData.map(d => ({
     name: d.name,
@@ -207,10 +210,10 @@ export default function BasketBridge() {
       <div className="px-6 md:px-10 py-6 border-b border-neutral-900 bg-gradient-to-b from-neutral-950 to-black flex items-center justify-between">
         <motion.h1 initial={{opacity:0, y:10}} animate={{opacity:1, y:0}} transition={{duration:0.6}} className="text-2xl md:text-3xl font-semibold tracking-tight">BasketBridge <span className="text-neutral-400">• Grocery → Margin Mix</span></motion.h1>
         <div className="flex gap-2">
-          <Button onClick={() => setMode('CEO')} className={`bg-neutral-800 hover:bg-neutral-700 ${mode==='CEO'?'ring-2 ring-white/40':''}`}>CEO Mode</Button>
-          <Button onClick={() => setMode('Analyst')} className={`bg-neutral-800 hover:bg-neutral-700 ${mode==='Analyst'?'ring-2 ring-white/40':''}`}>Analyst</Button>
-          <Button onClick={() => setMode('Drill-Down')} className={`bg-neutral-800 hover:bg-neutral-700 ${mode==='Drill-Down'?'ring-2 ring-white/40':''}`}>Drill-Down</Button>
-          <Button onClick={() => setMode('Q&A')} className={`bg-neutral-800 hover:bg-neutral-700 ${mode==='Q&A'?'ring-2 ring-white/40':''}`}>Ask (Azure OpenAI)</Button>
+          <Button onClick={() => setMode('CEO')} className={`bg-neutral-800 hover:bg-neutral-700 text-white ${mode==='CEO'?'ring-2 ring-white/40':''}`}>CEO Mode</Button>
+          <Button onClick={() => setMode('Analyst')} className={`bg-neutral-800 hover:bg-neutral-700 text-white ${mode==='Analyst'?'ring-2 ring-white/40':''}`}>Analyst</Button>
+          <Button onClick={() => setMode('Drill-Down')} className={`bg-neutral-800 hover:bg-neutral-700 text-white ${mode==='Drill-Down'?'ring-2 ring-white/40':''}`}>Drill-Down</Button>
+          <Button onClick={() => setMode('Q&A')} className={`bg-neutral-800 hover:bg-neutral-700 text-white ${mode==='Q&A'?'ring-2 ring-white/40':''}`}>Ask (Azure OpenAI)</Button>
         </div>
       </div>
 
@@ -350,11 +353,13 @@ export default function BasketBridge() {
               <div className="space-y-4">
                 {hierarchicalData.map((item, idx) => (
                   <div key={idx} className="pl-4" style={{ paddingLeft: `${item.level * 2}rem` }}>
-                    <div className="flex items-center gap-4 text-sm">
+                    <div className="flex items-center gap-4 text-sm flex-wrap">
                       <div className={`w-3 h-3 rounded-full ${item.level === 0 ? 'bg-red-500' : item.level === 1 ? 'bg-orange-500' : item.level === 2 ? 'bg-yellow-500' : 'bg-green-500'}`}></div>
                       <span className="font-medium text-white w-48">{item.name}</span>
                       <span className="text-neutral-400">{item.txnCount.toLocaleString()} txns</span>
+                      <span className="text-neutral-300">({item.pctTxns.toFixed(1)}%)</span>
                       <span className="text-neutral-400">${(item.sales / 1000000).toFixed(2)}M</span>
+                      <span className="text-neutral-300">({item.pctRevenue.toFixed(1)}%)</span>
                       <span className="text-neutral-500 text-xs">Avg: ${(item.sales / item.txnCount).toFixed(2)}</span>
                     </div>
                   </div>
