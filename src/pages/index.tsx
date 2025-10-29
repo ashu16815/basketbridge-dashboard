@@ -291,7 +291,7 @@ export default function BasketBridge() {
             <CardContent className="p-6">
               <div className="text-lg font-medium text-white mb-2">Notes & Caveats</div>
               <ul className="list-disc pl-5 space-y-2 text-neutral-300 text-sm">
-                {analystBullets.map((b, j) => <li key={j}>{b}</li>}
+                {analystBullets.map((b, j) => <li key={j}>{b}</li>)}
                 <li className="text-neutral-400">Home ∪ Apparel union not deduped; true overlap requires basket‑line data.</li>
               </ul>
             </CardContent>
