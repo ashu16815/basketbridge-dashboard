@@ -29,6 +29,53 @@ const kpi = {
   avgMixed: 20.91189576259427,
 };
 
+// Transaction hierarchy data from the spreadsheet
+const transactionHierarchy = {
+  total: {
+    txnCount: 42300301,
+    sales: 1796953852,
+    units: 196328020
+  },
+  grocery: {
+    txnCount: 24745410,
+    sales: 508220881,
+    units: 97386655,
+    pure: {
+      txnCount: 11607631,
+      sales: 233485016,
+      units: 44660976
+    },
+    mixed: {
+      txnCount: 13137779,
+      sales: 274735865,
+      units: 52725679,
+      otherCategories: {
+        sales: 529328107,
+        units: 48211097
+      }
+    }
+  },
+  groceryFood: {
+    txnCount: 19178280,
+    sales: 279842307,
+    units: 67548565,
+    pure: {
+      txnCount: 6687892,
+      sales: 87856720,
+      units: 21018278
+    },
+    mixed: {
+      txnCount: 12490388,
+      sales: 191985587,
+      units: 46530287,
+      otherCategories: {
+        sales: 529081628,
+        units: 54524667
+      }
+    }
+  }
+};
+
 // Mixed category incidence (non-exclusive; one txn can include multiple categories)
 const mixCats = [
   { name: "Home & Garden", mixTxns: 6322479, mixSales: 189188916.0, avgTicket: 29.923217775812304 },
@@ -57,7 +104,7 @@ function StatCard({ label, value, sub }: { label: string; value: string; sub?: s
 export default function BasketBridge() {
   const [code, setCode] = useState("");
   const [ok, setOk] = useState(false);
-  const [mode, setMode] = useState<'CEO' | 'Analyst' | 'Q&A'>('CEO');
+  const [mode, setMode] = useState<'CEO' | 'Analyst' | 'Q&A' | 'Drill-Down'>('CEO');
   const [ask, setAsk] = useState("");
   const [answer, setAnswer] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -84,6 +131,24 @@ export default function BasketBridge() {
     const txnsConverted = Math.round(kpi.pureTxns * (conv/100));
     return { txnsConverted, sales: deltaAvg * txnsConverted };
   }, [conv]);
+
+  // Drill-Down mode data
+  const hierarchicalData = useMemo(() => [
+    { name: "Total TWL", txnCount: transactionHierarchy.total.txnCount, sales: transactionHierarchy.total.sales, level: 0 },
+    { name: "Grocery Food & Non-Food", txnCount: transactionHierarchy.grocery.txnCount, sales: transactionHierarchy.grocery.sales, level: 1 },
+    { name: "Grocery Food", txnCount: transactionHierarchy.groceryFood.txnCount, sales: transactionHierarchy.groceryFood.sales, level: 2 },
+    { name: "Grocery Food (Pure)", txnCount: transactionHierarchy.groceryFood.pure.txnCount, sales: transactionHierarchy.groceryFood.pure.sales, level: 3 },
+    { name: "Grocery Food (Mixed)", txnCount: transactionHierarchy.groceryFood.mixed.txnCount, sales: transactionHierarchy.groceryFood.mixed.sales, level: 3 },
+    { name: "Grocery (Pure)", txnCount: transactionHierarchy.grocery.pure.txnCount, sales: transactionHierarchy.grocery.pure.sales, level: 2 },
+    { name: "Grocery (Mixed)", txnCount: transactionHierarchy.grocery.mixed.txnCount, sales: transactionHierarchy.grocery.mixed.sales, level: 2 },
+  ], []);
+
+  const barDataHierarchy = useMemo(() => hierarchicalData.map(d => ({
+    name: d.name,
+    txnCount: d.txnCount,
+    sales: d.sales / 1000000, // Convert to millions for readability
+    avgTicket: d.sales / d.txnCount
+  })), []);
 
   const kpiCards = [
     { label: "Grocery TXNs (All)", value: kpi.totalGroceryTxns.toLocaleString(), sub: `Avg Ticket $${kpi.avgAll.toFixed(2)}` },
@@ -139,14 +204,13 @@ export default function BasketBridge() {
   return (
     <div className="min-h-screen bg-black text-white">
       {/* Header */}
-      <div className="px-6 md:px-10 py-6 border-b border-neutral-900 bg-gradient-to-b from-neutral-950 to-black">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <motion.h1 initial={{opacity:0, y:10}} animate={{opacity:1, y:0}} transition={{duration:0.6}} className="text-2xl md:text-3xl font-semibold tracking-tight">BasketBridge <span className="text-neutral-400">• Grocery → Margin Mix</span></motion.h1>
-          <div className="flex gap-2 flex-wrap">
-            <Button onClick={() => setMode('CEO')} className={`bg-neutral-800 hover:bg-neutral-700 text-white ${mode==='CEO'?'ring-2 ring-white/40':''}`}>CEO Mode</Button>
-            <Button onClick={() => setMode('Analyst')} className={`bg-neutral-800 hover:bg-neutral-700 text-white ${mode==='Analyst'?'ring-2 ring-white/40':''}`}>Analyst</Button>
-            <Button onClick={() => setMode('Q&A')} className={`bg-neutral-800 hover:bg-neutral-700 text-white ${mode==='Q&A'?'ring-2 ring-white/40':''}`}>Ask (Azure OpenAI)</Button>
-          </div>
+      <div className="px-6 md:px-10 py-6 border-b border-neutral-900 bg-gradient-to-b from-neutral-950 to-black flex items-center justify-between">
+        <motion.h1 initial={{opacity:0, y:10}} animate={{opacity:1, y:0}} transition={{duration:0.6}} className="text-2xl md:text-3xl font-semibold tracking-tight">BasketBridge <span className="text-neutral-400">• Grocery → Margin Mix</span></motion.h1>
+        <div className="flex gap-2">
+          <Button onClick={() => setMode('CEO')} className={`bg-neutral-800 hover:bg-neutral-700 ${mode==='CEO'?'ring-2 ring-white/40':''}`}>CEO Mode</Button>
+          <Button onClick={() => setMode('Analyst')} className={`bg-neutral-800 hover:bg-neutral-700 ${mode==='Analyst'?'ring-2 ring-white/40':''}`}>Analyst</Button>
+          <Button onClick={() => setMode('Drill-Down')} className={`bg-neutral-800 hover:bg-neutral-700 ${mode==='Drill-Down'?'ring-2 ring-white/40':''}`}>Drill-Down</Button>
+          <Button onClick={() => setMode('Q&A')} className={`bg-neutral-800 hover:bg-neutral-700 ${mode==='Q&A'?'ring-2 ring-white/40':''}`}>Ask (Azure OpenAI)</Button>
         </div>
       </div>
 
@@ -165,16 +229,16 @@ export default function BasketBridge() {
           <Card className="bg-neutral-900/60 border-neutral-800 rounded-2xl col-span-1">
             <CardContent className="p-6">
               <div className="text-sm text-neutral-300 mb-4">Grocery Mix vs Pure (by transactions)</div>
-            <div className="w-full h-64 min-h-[256px]">
-              <ResponsiveContainer width="100%" height={256}>
-                <PieChart>
-                  <Pie data={pieData} dataKey="value" nameKey="name" innerRadius={60} outerRadius={95}>
-                    {pieData.map((_, idx) => <Cell key={idx} fill={palette[idx % palette.length]} />)}
-                  </Pie>
-                  <ReTooltip formatter={(v: any, n: any) => [Number(v).toLocaleString(), n]} />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
+              <div className="w-full h-64">
+                <ResponsiveContainer>
+                  <PieChart>
+                    <Pie data={pieData} dataKey="value" nameKey="name" innerRadius={60} outerRadius={95}>
+                      {pieData.map((_, idx) => <Cell key={idx} fill={palette[idx % palette.length]} />)}
+                    </Pie>
+                    <ReTooltip formatter={(v: any, n: any) => [Number(v).toLocaleString(), n]} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
               <div className="text-xs text-neutral-400 mt-2">{(kpi.pctMixed*100).toFixed(1)}% of grocery transactions are mixed. Mixed baskets carry a higher average ticket (${kpi.avgMixed.toFixed(2)}) than pure grocery (${kpi.avgPure.toFixed(2)}).</div>
             </CardContent>
           </Card>
@@ -182,19 +246,19 @@ export default function BasketBridge() {
           <Card className="bg-neutral-900/60 border-neutral-800 rounded-2xl lg:col-span-2">
             <CardContent className="p-6">
               <div className="text-sm text-neutral-300 mb-2">Attachment incidence (non‑exclusive) & avg ticket</div>
-            <div className="w-full h-72 min-h-[288px]">
-              <ResponsiveContainer width="100%" height={288}>
-                <BarChart data={barData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#262626" />
-                  <XAxis dataKey="category" tick={{ fill: "#a3a3a3", fontSize: 12 }} interval={0} angle={-15} textAnchor="end" height={60} />
-                  <YAxis tick={{ fill: "#a3a3a3", fontSize: 12 }} unit="%" />
-                  <ReTooltip formatter={(v: any, n: any) => [n === "incidence" ? v+"%" : `$${Number(v).toLocaleString()}`, n]} />
-                  <Legend />
-                  <Bar dataKey="incidence" name="Incidence of mixed TXNs" fill={palette[2]} />
-                  <Bar dataKey="avgTicket" name="Avg. ticket in that category" fill={palette[1]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
+              <div className="w-full h-72">
+                <ResponsiveContainer>
+                  <BarChart data={barData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#262626" />
+                    <XAxis dataKey="category" tick={{ fill: "#a3a3a3", fontSize: 12 }} interval={0} angle={-15} textAnchor="end" height={60} />
+                    <YAxis tick={{ fill: "#a3a3a3", fontSize: 12 }} unit="%" />
+                    <ReTooltip formatter={(v: any, n: any) => [n === "incidence" ? v+"%" : `$${Number(v).toLocaleString()}`, n]} />
+                    <Legend />
+                    <Bar dataKey="incidence" name="Incidence of mixed TXNs" fill={palette[2]} />
+                    <Bar dataKey="avgTicket" name="Avg. ticket in that category" fill={palette[1]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
             </CardContent>
           </Card>
 
@@ -227,7 +291,7 @@ export default function BasketBridge() {
             <CardContent className="p-6">
               <div className="text-lg font-medium text-white mb-2">Notes & Caveats</div>
               <ul className="list-disc pl-5 space-y-2 text-neutral-300 text-sm">
-                {analystBullets.map((b, j) => <li key={j}>{b}</li>)}
+                {analystBullets.map((b, j) => <li key={j}>{b}</li>}
                 <li className="text-neutral-400">Home ∪ Apparel union not deduped; true overlap requires basket‑line data.</li>
               </ul>
             </CardContent>
@@ -239,6 +303,104 @@ export default function BasketBridge() {
               <div className="text-neutral-300 text-sm">Use browser print to save PDF. CSV/JSON can be added via a Download button component pulling from /public/data/grocery_summary.json.</div>
             </CardContent>
           </Card>
+        </div>
+      )}
+
+      {/* Drill-Down strip */}
+      {mode==='Drill-Down' && (
+        <div className="px-6 md:px-10 py-6">
+          <Card className="bg-neutral-900/60 border-neutral-800 rounded-2xl mb-6">
+            <CardContent className="p-6">
+              <div className="text-lg font-medium mb-4">Transaction Hierarchy Overview</div>
+              <div className="text-sm text-neutral-400 mb-4">
+                Drill down from total transactions through Grocery categories to Pure vs Mixed breakdowns
+              </div>
+              <div className="w-full h-96 min-h-[384px]">
+                <ResponsiveContainer width="100%" height={384}>
+                  <BarChart data={barDataHierarchy} layout="vertical">
+                    <CartesianGrid strokeDasharray="3 3" stroke="#262626" />
+                    <XAxis type="number" tick={{ fill: "#a3a3a3", fontSize: 12 }} />
+                    <YAxis 
+                      dataKey="name" 
+                      type="category" 
+                      width={200}
+                      tick={{ fill: "#a3a3a3", fontSize: 11 }}
+                    />
+                    <ReTooltip 
+                      formatter={(value: any, name: string) => {
+                        if (name === 'txnCount') return [value.toLocaleString() + ' transactions', name];
+                        if (name === 'sales') return ['$' + value.toFixed(2) + 'M', name];
+                        if (name === 'avgTicket') return ['$' + value.toFixed(2), name];
+                        return [value, name];
+                      }}
+                    />
+                    <Legend />
+                    <Bar dataKey="txnCount" name="Transaction Count" fill={palette[0]} />
+                    <Bar dataKey="sales" name="Sales (Millions $)" fill={palette[1]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Hierarchical Tree View */}
+          <Card className="bg-neutral-900/60 border-neutral-800 rounded-2xl mb-6">
+            <CardContent className="p-6">
+              <div className="text-lg font-medium mb-4">Hierarchical Breakdown</div>
+              <div className="space-y-4">
+                {hierarchicalData.map((item, idx) => (
+                  <div key={idx} className="pl-4" style={{ paddingLeft: `${item.level * 2}rem` }}>
+                    <div className="flex items-center gap-4 text-sm">
+                      <div className={`w-3 h-3 rounded-full ${item.level === 0 ? 'bg-red-500' : item.level === 1 ? 'bg-orange-500' : item.level === 2 ? 'bg-yellow-500' : 'bg-green-500'}`}></div>
+                      <span className="font-medium text-white w-48">{item.name}</span>
+                      <span className="text-neutral-400">{item.txnCount.toLocaleString()} txns</span>
+                      <span className="text-neutral-400">${(item.sales / 1000000).toFixed(2)}M</span>
+                      <span className="text-neutral-500 text-xs">Avg: ${(item.sales / item.txnCount).toFixed(2)}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Summary Stats */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <Card className="bg-neutral-900/60 border-neutral-800 rounded-2xl">
+              <CardContent className="p-6">
+                <div className="text-sm text-neutral-400">Total Transactions (TWL)</div>
+                <div className="text-3xl font-semibold text-white mt-2">
+                  {transactionHierarchy.total.txnCount.toLocaleString()}
+                </div>
+                <div className="text-xs text-neutral-500 mt-2">
+                  ${transactionHierarchy.total.sales.toLocaleString()} total sales
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-neutral-900/60 border-neutral-800 rounded-2xl">
+              <CardContent className="p-6">
+                <div className="text-sm text-neutral-400">Grocery Food & Non-Food</div>
+                <div className="text-3xl font-semibold text-white mt-2">
+                  {transactionHierarchy.grocery.txnCount.toLocaleString()}
+                </div>
+                <div className="text-xs text-neutral-500 mt-2">
+                  {((transactionHierarchy.grocery.txnCount / transactionHierarchy.total.txnCount) * 100).toFixed(1)}% of total
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-neutral-900/60 border-neutral-800 rounded-2xl">
+              <CardContent className="p-6">
+                <div className="text-sm text-neutral-400">Grocery Food (Subset)</div>
+                <div className="text-3xl font-semibold text-white mt-2">
+                  {transactionHierarchy.groceryFood.txnCount.toLocaleString()}
+                </div>
+                <div className="text-xs text-neutral-500 mt-2">
+                  {((transactionHierarchy.groceryFood.txnCount / transactionHierarchy.grocery.txnCount) * 100).toFixed(1)}% of Grocery
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </div>
       )}
 
